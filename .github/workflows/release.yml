@@ -1,0 +1,52 @@
+name: Release Browser Extension
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build extension
+        run: npm run build:ci
+
+      - name: Verify extension package
+        run: test -f dist/manifest.json
+
+      - name: Package extension
+        run: |
+          cd dist
+          zip -r ../botcake-flow-toolkit-${{ github.ref_name }}.zip .
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "botcake-flow-toolkit-${{ github.ref_name }}.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "botcake-flow-toolkit-${{ github.ref_name }}.zip"
+          generate_release_notes: true

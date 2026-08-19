@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Botcake 流程助手">
+  <defs>
+    <linearGradient id="bg" x1="18" y1="14" x2="112" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B5F59"/>
+      <stop offset="1" stop-color="#14B8A6"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="29" fill="url(#bg)"/>
+  <path d="M43 27v74M43 37h24c17 0 25 9 25 20S84 76 67 76H43M43 65h29c18 0 27 9 27 20s-9 18-27 18H43" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="92" cy="57" r="8" fill="#99F6E4" stroke="#fff" stroke-width="4"/>
+  <circle cx="99" cy="85" r="8" fill="#99F6E4" stroke="#fff" stroke-width="4"/>
+</svg>
