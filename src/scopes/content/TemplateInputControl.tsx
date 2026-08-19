@@ -23,6 +23,10 @@ export function TemplateInputControl({ input, value, assets, onChange }: { input
   const [selectedOption, setSelectedOption] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
   useEffect(() => {
+    setSelectedOption("");
+    setOptionError("");
+  }, [input.key, input.kind, input.options]);
+  useEffect(() => {
     if (!value.bytes?.byteLength || !value.mime) { setPreviewUrl(""); return; }
     const url = URL.createObjectURL(new Blob([value.bytes.slice().buffer], { type: value.mime }));
     setPreviewUrl(url);
@@ -71,15 +75,30 @@ export function TemplateInputControl({ input, value, assets, onChange }: { input
     {previewUrl && input.kind === "video" && <video className="media-input-preview" src={previewUrl} controls />}
     {value.fileName && <small>已选择：{value.fileName}</small>}{optionError && <small className="field-error">{optionError}</small>}
   </div>;
-  const picker = input.options?.length ? <select defaultValue="" onChange={async (event) => {
-    const option = event.target.value === "" ? undefined : input.options?.[Number(event.target.value)];
-    if (!option) return;
-    try { setOptionError(""); onChange({ text: option.url ? await fetchText(normalizePublicDriveUrl(option.url)) : option.value ?? "" }); }
-    catch (error) { setOptionError(`读取选项失败：${messageOf(error)}`); }
+  const picker = input.options?.length ? <select value={selectedOption} onChange={async (event) => {
+    const index = event.target.value;
+    setSelectedOption(index);
+    const option = index === "" ? undefined : input.options?.[Number(index)];
+    if (!option) {
+      setOptionError("");
+      if (input.kind === "random") onChange({});
+      return;
+    }
+    try {
+      setOptionError(option.url ? "正在读取选项…" : "");
+      onChange({ text: option.url ? await fetchText(normalizePublicDriveUrl(option.url)) : option.value ?? "" });
+      setOptionError("");
+    }
+    catch (error) { setSelectedOption(""); setOptionError(`读取选项失败：${messageOf(error)}`); }
   }}><option value="">{input.kind === "random" ? "自动随机（也可指定）" : "选择预置内容"}</option>{input.options.map((option, index) => <option key={index} value={index}>{option.label}</option>)}</select> : null;
-  if (input.kind === "random") return <div className="field input-card">{label}{picker}<small>不选择时自动随机一项。</small>{optionError && <small className="field-error">{optionError}</small>}</div>;
-  if (input.kind === "text") return <div className="field input-card">{label}{picker}<textarea rows={5} value={value.text ?? ""} onChange={(event) => onChange({ text: event.target.value })} placeholder={input.description || `填写${input.label}`} />{optionError && <small className="field-error">{optionError}</small>}</div>;
-  return <div className="field input-card">{label}{picker}<input type="number" value={value.text ?? ""} onChange={(event) => onChange({ text: event.target.value })} placeholder={input.description || `填写${input.label}`} />{optionError && <small className="field-error">{optionError}</small>}</div>;
+  const updateManualText = (text: string) => {
+    setSelectedOption("");
+    setOptionError("");
+    onChange({ text });
+  };
+  if (input.kind === "random") return <div className="field input-card">{label}{picker}<textarea rows={5} value={value.text ?? ""} onChange={(event) => updateManualText(event.target.value)} placeholder={`手动填写${input.label}（留空时自动随机）`} /><small>选择后可在输入框中预览和修改；留空时自动随机一项。</small>{optionError && <small className="field-error">{optionError}</small>}</div>;
+  if (input.kind === "text") return <div className="field input-card">{label}{picker}<textarea rows={5} value={value.text ?? ""} onChange={(event) => updateManualText(event.target.value)} placeholder={input.description || `填写${input.label}`} />{input.options?.length ? <small>选择后可在输入框中预览和修改。</small> : null}{optionError && <small className="field-error">{optionError}</small>}</div>;
+  return <div className="field input-card">{label}{picker}<input type="number" value={value.text ?? ""} onChange={(event) => updateManualText(event.target.value)} placeholder={input.description || `填写${input.label}`} />{input.options?.length ? <small>选择后可在输入框中预览和修改。</small> : null}{optionError && <small className="field-error">{optionError}</small>}</div>;
 }
 
 export function isMediaInput(input: TemplateInput): input is TemplateInput & { kind: "image" | "audio" | "video" } {
