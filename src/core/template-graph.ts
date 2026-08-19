@@ -173,7 +173,10 @@ function keepsEmptyTextField(pluginId: string, path: string, key: string): boole
 }
 
 export function getBlockMediaFields(template: FlowTemplateV1, blockIndex: number): TemplateMediaField[] {
-  const prefix = `$.blocks[${blockIndex}]`;
+  // The trailing path separator is intentional: without it, block 1 also
+  // matches paths such as `$.blocks[10]...` and leaks that node's media into
+  // the current node when a flow has ten or more blocks.
+  const prefix = `$.blocks[${blockIndex}].`;
   return template.dependencies.media.flatMap((media) => {
     if (!media.configPath.startsWith(prefix)) return [];
     return [{

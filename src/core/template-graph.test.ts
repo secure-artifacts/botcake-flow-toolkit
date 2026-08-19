@@ -134,6 +134,27 @@ describe("template graph", () => {
     ]);
   });
 
+  it("does not leak media from double-digit block indexes into earlier nodes", () => {
+    const withDoubleDigitBlock = structuredClone(template);
+    const blocks = withDoubleDigitBlock.flow.post.blocks as Array<Record<string, unknown>>;
+    while (blocks.length < 11) blocks.push({ key: `empty-${blocks.length}`, cards: [] });
+    withDoubleDigitBlock.dependencies.media.push({
+      key: "media_10",
+      kind: "image",
+      configPath: "$.blocks[10].cards[0].config",
+      sourceUrl: "https://example.com/photo.png",
+      asset: "assets/media_10.png",
+      name: "photo.png",
+    });
+
+    expect(getBlockMediaFields(withDoubleDigitBlock, 1)).toEqual([
+      expect.objectContaining({ key: "media_1" }),
+    ]);
+    expect(getBlockMediaFields(withDoubleDigitBlock, 10)).toEqual([
+      expect.objectContaining({ key: "media_10" }),
+    ]);
+  });
+
   it("classifies structural nodes before looking for editable text", () => {
     const structural = structuredClone(template);
     structural.flow.post.blocks = [

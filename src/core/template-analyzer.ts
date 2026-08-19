@@ -62,14 +62,17 @@ export function analyzeSnapshot(snapshot: FlowSnapshot): FlowTemplateV1 {
 
     if (value && typeof value === "object" && !Array.isArray(value)) {
       const record = value as Record<string, unknown>;
+      const cardPluginId = getCardPluginId(post, path);
       const pluginKind = record.plugin_id === "image" || record.plugin_id === "audio" || record.plugin_id === "video" ? record.plugin_id : undefined;
       const pluginConfig = record.config && typeof record.config === "object" && !Array.isArray(record.config)
         ? record.config as Record<string, unknown>
         : undefined;
       const url = pluginConfig
-        ? firstString(pluginConfig.content_url, pluginConfig.url, pluginConfig.preview_url)
-        : firstString(record.content_url, record.url, record.preview_url);
-      const kind = pluginKind ?? inferMediaKind(record, url);
+        ? firstString(pluginConfig.content_url, pluginConfig.url)
+        : firstString(record.content_url, record.url);
+      const kind = pluginKind ?? (isNestedCardMedia(path, cardPluginId) && hasMediaIdentity(record)
+        ? inferMediaKind(record, url)
+        : undefined);
       const configPath = pluginConfig ? `${path}.config` : path;
       if (url && kind && !media.has(configPath)) {
         const extension = extensionFor(kind, url);
@@ -80,7 +83,7 @@ export function analyzeSnapshot(snapshot: FlowSnapshot): FlowTemplateV1 {
           configPath,
           sourceUrl: url,
           asset: `assets/${mediaKey}.${extension}`,
-          name: firstString(record.name) || `${mediaKey}.${extension}`,
+          name: firstString(pluginConfig?.name, record.name) || `${mediaKey}.${extension}`,
           mime: mimeFor(kind, extension),
         });
       }
@@ -127,6 +130,28 @@ function getEntryBlockKey(post: Record<string, unknown>): string | undefined {
   if (!first || typeof first !== "object" || Array.isArray(first)) return undefined;
   const key = (first as Record<string, unknown>).key;
   return typeof key === "string" && key.length > 0 ? key : undefined;
+}
+
+function getCardPluginId(post: Record<string, unknown>, path: string): string | undefined {
+  const match = path.match(/^\$\.blocks\[(\d+)]\.cards\[(\d+)](?:\.|$)/);
+  if (!match) return undefined;
+  const blocks = Array.isArray(post.blocks) ? post.blocks : [];
+  const block = blocks[Number(match[1])];
+  if (!block || typeof block !== "object" || Array.isArray(block)) return undefined;
+  const cards = (block as Record<string, unknown>).cards;
+  const card = Array.isArray(cards) ? cards[Number(match[2])] : undefined;
+  if (!card || typeof card !== "object" || Array.isArray(card)) return undefined;
+  const pluginId = (card as Record<string, unknown>).plugin_id;
+  return typeof pluginId === "string" ? pluginId.toLowerCase() : undefined;
+}
+
+function isNestedCardMedia(path: string, cardPluginId?: string): boolean {
+  if (!cardPluginId || !/^\$\.blocks\[\d+]\.cards\[\d+]\.config(?:\.|\[)/.test(path)) return false;
+  return /(?:multi_image|multiple(?:_image)?|gallery|carousel|generic|template)/i.test(cardPluginId);
+}
+
+function hasMediaIdentity(record: Record<string, unknown>): boolean {
+  return firstString(record.content_url, record.name, record.content_id, record.upload_type, record.media_type) !== undefined;
 }
 
 function firstString(...values: unknown[]): string | undefined {

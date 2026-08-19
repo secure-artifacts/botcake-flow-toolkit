@@ -45,6 +45,36 @@ describe("template archive", () => {
     expect(template.dependencies.unsupported).toEqual([]);
   });
 
+  it("does not export a card preview or an image URL used by a normal button as media", () => {
+    const thumbnailUrl = "https://content.pancake.vn/2-2602/2026/2/2/0ae990a90aa7d02668efa972158f500f8165a3d3_thumb.jpg";
+    const withThumbnail = analyzeSnapshot({
+      ...snapshot,
+      post: {
+        id: 201,
+        name: "缩略图不应导出",
+        blocks: [{
+          key: "block-a",
+          cards: [{
+            plugin_id: "text",
+            config: {
+              text: "普通文本",
+              preview_url: thumbnailUrl,
+              buttons: [{ title: "打开图片", type: "link", url: thumbnailUrl }],
+            },
+          }, {
+            plugin_id: "image",
+            config: { name: "real.png", content_url: "https://cdn.example/real.png", preview_url: thumbnailUrl },
+          }],
+          gotos: {},
+        }],
+      },
+    });
+
+    expect(withThumbnail.dependencies.media).toEqual([
+      expect.objectContaining({ kind: "image", sourceUrl: "https://cdn.example/real.png", name: "real.png" }),
+    ]);
+  });
+
   it("rejects templates that do not declare an entry block", () => {
     const template = analyzeSnapshot(snapshot);
     const withoutEntry = JSON.parse(JSON.stringify(template));
