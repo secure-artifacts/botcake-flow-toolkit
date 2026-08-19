@@ -4,7 +4,7 @@ export default defineManifest({
   manifest_version: 3,
   name: "Botcake 流程助手",
   description: "从结构化模板制作、校验并替换 Botcake Flow。",
-  version: "1.0.0",
+  version: "1.0.1",
   icons: {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
